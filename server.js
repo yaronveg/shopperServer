@@ -1,6 +1,9 @@
 import express from "express";
 import fetch from "node-fetch";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
@@ -46,8 +49,6 @@ app.get("/products", async (req, res) => {
 app.get("/products/:id", async (req, res) => {
   const { id } = req.params;
   res.send(await Product.findById(id));
-  // let products = await Product.find();
-  // res.send(products.find((product) => product.id === id));
 });
 
 // CREATE //
@@ -81,13 +82,19 @@ app.delete("/products/:id", async (req, res) => {
   res.send(deleted);
 });
 
-mongoose.connect("mongodb://localhost:27017/test", async (err) => {
-  err ? console.log(err) : app.listen(8000);
-  const dbProducts = await Product.find();
-  if (!dbProducts.length) {
-    const data = await fetch("https://fakestoreapi.com/products");
-    const products = await data.json();
-    const newIds = products.map((product) => ({ ...product, id: undefined }));
-    const fetchProducts = await Product.insertMany(...newIds);
+const { DB_USER, DB_PASS, DB_HOST, DB_NAME } = process.env;
+
+// mongoose.connect("mongodb://localhost:27017/test", async (err) => {
+mongoose.connect(
+  `mongodb+srv://${DB_USER}:${DB_PASS}@${DB_HOST}/${DB_NAME}?retryWrites=true&w=majority`,
+  async (err) => {
+    err ? console.log(err) : app.listen(8000);
+    const dbProducts = await Product.find();
+    if (!dbProducts.length) {
+      const data = await fetch("https://fakestoreapi.com/products");
+      const products = await data.json();
+      const newIds = products.map((product) => ({ ...product, id: undefined }));
+      Product.insertMany(newIds);
+    }
   }
-});
+);
